@@ -52,6 +52,19 @@ export class ImageProcessingService {
         quality
       )
 
+      // Final validation to ensure all levels are present and valid
+      const isValid = ImageProcessingService.validatePixelationLevels(pixelationLevels)
+      if (!isValid) {
+        throw new Error('Final validation failed: Generated pixelation levels are incomplete')
+      }
+
+      console.log('ImageProcessingService: Final validation passed for', file.name, 'with levels:', {
+        level1: pixelationLevels.level1?.size || 0,
+        level2: pixelationLevels.level2?.size || 0,
+        level3: pixelationLevels.level3?.size || 0,
+        level4: pixelationLevels.level4?.size || 0
+      })
+
       // Create GameImage object
       const gameImage: GameImage = {
         id: generateId(),
@@ -131,7 +144,7 @@ export class ImageProcessingService {
   }
 
   /**
-   * Process multiple images in batches to avoid memory issues
+   * Process multiple images sequentially to avoid resource contention
    */
   static async processBatch(
     files: File[],
@@ -147,7 +160,6 @@ export class ImageProcessingService {
     const {
       maxWidth = ImageProcessingService.DEFAULT_MAX_WIDTH,
       quality = ImageProcessingService.DEFAULT_QUALITY,
-      batchSize = 3, // Process 3 images concurrently
       onProgress,
       onImageComplete
     } = options
@@ -155,44 +167,41 @@ export class ImageProcessingService {
     const results: ImageProcessingResult[] = []
     const total = files.length
 
-    // Process files in batches
-    for (let i = 0; i < files.length; i += batchSize) {
-      const batch = files.slice(i, i + batchSize)
+    // Process files sequentially to avoid canvas resource contention
+    // Canvas operations can interfere with each other when run concurrently
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i]
       
-      // Process batch concurrently
-      const batchPromises = batch.map(async (file, batchIndex) => {
-        const globalIndex = i + batchIndex
-        try {
-          const result = await ImageProcessingService.processImage(
-            file,
-            categoryId,
-            maxWidth,
-            quality
-          )
-          
-          onImageComplete?.(result, globalIndex)
-          onProgress?.(globalIndex + 1, total)
-          
-          return result
-        } catch (error) {
-          const errorResult: ImageProcessingResult = {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error'
-          }
-          
-          onImageComplete?.(errorResult, globalIndex)
-          onProgress?.(globalIndex + 1, total)
-          
-          return errorResult
+      try {
+        console.log(`ImageProcessingService: Processing batch item ${i + 1}/${total}: ${file.name}`)
+        
+        const result = await ImageProcessingService.processImage(
+          file,
+          categoryId,
+          maxWidth,
+          quality
+        )
+        
+        results.push(result)
+        onImageComplete?.(result, i)
+        onProgress?.(i + 1, total)
+        
+        // Small delay between images to allow garbage collection and prevent memory pressure
+        if (i < files.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 150))
         }
-      })
-
-      const batchResults = await Promise.all(batchPromises)
-      results.push(...batchResults)
-
-      // Small delay between batches to prevent UI blocking
-      if (i + batchSize < files.length) {
-        await new Promise(resolve => setTimeout(resolve, 10))
+        
+      } catch (error) {
+        console.error(`ImageProcessingService: Failed to process batch item ${file.name}:`, error)
+        
+        const errorResult: ImageProcessingResult = {
+          success: false,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        }
+        
+        results.push(errorResult)
+        onImageComplete?.(errorResult, i)
+        onProgress?.(i + 1, total)
       }
     }
 
@@ -200,9 +209,35 @@ export class ImageProcessingService {
   }
 
   /**
-   * Create all pixelation levels for an image
+   * Create all pixelation levels for an image with retry logic
    */
   private static async createPixelationLevels(
+    canvas: HTMLCanvasElement,
+    quality: number,
+    retryCount: number = 0
+  ): Promise<GameImage['pixelationLevels']> {
+    const maxRetries = 3 // Increased from 2 to 3 retries
+    
+    try {
+      return await this.createPixelationLevelsInternal(canvas, quality)
+    } catch (error) {
+      if (retryCount < maxRetries) {
+        console.warn(`ImageProcessingService: Retry ${retryCount + 1}/${maxRetries} for pixelation levels creation:`, error)
+        // Clean up memory and wait before retrying
+        await this.forceMemoryCleanup()
+        await new Promise(resolve => setTimeout(resolve, 1500 + (retryCount * 500))) // Increasing delay
+        return this.createPixelationLevels(canvas, quality, retryCount + 1)
+      } else {
+        console.error(`ImageProcessingService: Failed to create pixelation levels after ${maxRetries} retries:`, error)
+        throw error
+      }
+    }
+  }
+
+  /**
+   * Internal method to create all pixelation levels for an image
+   */
+  private static async createPixelationLevelsInternal(
     canvas: HTMLCanvasElement,
     quality: number
   ): Promise<GameImage['pixelationLevels']> {
@@ -216,7 +251,7 @@ export class ImageProcessingService {
       console.log(`ImageProcessingService: Creating ${levelKey} with pixel size ${pixelSize}`)
       
       try {
-        // Create canvas copy
+        // Create canvas copy with better memory management
         const levelCanvas = document.createElement('canvas')
         levelCanvas.width = canvas.width
         levelCanvas.height = canvas.height
@@ -225,15 +260,21 @@ export class ImageProcessingService {
         if (!ctx) {
           throw new Error('Could not get canvas context')
         }
-        
+
         // Copy original image to level canvas
         ctx.drawImage(canvas, 0, 0)
         
         if (pixelSize === 0) {
           // Level 4: Original image
+          console.log(`ImageProcessingService: Creating original image blob for ${levelKey}`)
           levels[levelKey] = await new Promise<Blob>((resolve, reject) => {
+            const timeoutId = setTimeout(() => {
+              reject(new Error(`Timeout creating original blob for ${levelKey}`))
+            }, 10000) // 10 second timeout
+            
             levelCanvas.toBlob(
               (blob) => {
+                clearTimeout(timeoutId)
                 if (blob && blob.size > 0) {
                   console.log(`ImageProcessingService: Created ${levelKey} blob, size: ${blob.size}`)
                   resolve(blob)
@@ -247,6 +288,7 @@ export class ImageProcessingService {
           })
         } else {
           // Pixelated levels
+          console.log(`ImageProcessingService: Creating pixelated image blob for ${levelKey} with ${pixelSize}px pixels`)
           const pixelatedBlob = await createPixelatedImage(levelCanvas, pixelSize, quality)
           if (pixelatedBlob && pixelatedBlob.size > 0) {
             levels[levelKey] = pixelatedBlob
@@ -255,6 +297,18 @@ export class ImageProcessingService {
             throw new Error(`Failed to create pixelated blob for ${levelKey}, size: ${pixelatedBlob?.size || 0}`)
           }
         }
+        
+        // Clean up the level canvas to free memory immediately
+        try {
+          ctx.clearRect(0, 0, levelCanvas.width, levelCanvas.height)
+          levelCanvas.width = 1 // Reset to minimal size
+          levelCanvas.height = 1
+          ctx.fillStyle = 'transparent'
+          ctx.clearRect(0, 0, 1, 1)
+        } catch (cleanupError) {
+          console.warn(`ImageProcessingService: Canvas cleanup warning for ${levelKey}:`, cleanupError)
+        }
+        
       } catch (error) {
         console.error(`ImageProcessingService: Failed to create ${levelKey}:`, error)
         throw new Error(`Failed to create pixelation level ${levelKey}: ${error instanceof Error ? error.message : 'Unknown error'}`)
@@ -488,5 +542,33 @@ export class ImageProcessingService {
     
     console.log('ImageProcessingService: Force regeneration complete')
     return newLevels
+  }
+
+  /**
+   * Force garbage collection and memory cleanup (best effort)
+   */
+  private static async forceMemoryCleanup() {
+    // Trigger garbage collection if available (mainly for development)
+    if (typeof window !== 'undefined' && (window as any).gc) {
+      console.log('ImageProcessingService: Triggering garbage collection')
+      ;(window as any).gc()
+    }
+    
+    // Request idle callback for cleanup if available
+    if (typeof window !== 'undefined' && window.requestIdleCallback) {
+      await new Promise<void>(resolve => {
+        window.requestIdleCallback(() => {
+          resolve()
+        })
+      })
+    }
+    
+    // Force browser to perform any pending cleanup
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // Additional cleanup attempt
+    if (typeof window !== 'undefined' && (window as any).gc) {
+      ;(window as any).gc()
+    }
   }
 }

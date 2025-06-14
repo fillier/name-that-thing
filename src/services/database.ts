@@ -250,6 +250,27 @@ export class DatabaseService {
   async saveImage(image: GameImage): Promise<void> {
     console.log('DatabaseService: Saving image', image.originalName, 'ID:', image.id)
     
+    // Validate pixelation levels before saving
+    const levels = image.pixelationLevels
+    const levelSizes = {
+      level1: levels.level1?.size || 0,
+      level2: levels.level2?.size || 0,
+      level3: levels.level3?.size || 0,
+      level4: levels.level4?.size || 0
+    }
+    
+    console.log('DatabaseService: Image pixelation level sizes:', levelSizes)
+    
+    const hasAllLevels = levelSizes.level1 > 0 && levelSizes.level2 > 0 && levelSizes.level3 > 0 && levelSizes.level4 > 0
+    if (!hasAllLevels) {
+      const missingLevels = Object.entries(levelSizes)
+        .filter(([_, size]) => size === 0)
+        .map(([level, _]) => level)
+      
+      console.error(`DatabaseService: CRITICAL - Attempting to save image ${image.originalName} with missing pixelation levels:`, missingLevels)
+      throw new Error(`Cannot save image with missing pixelation levels: ${missingLevels.join(', ')}`)
+    }
+    
     // Create a clean, serializable object by explicitly copying only the needed properties
     const serializedMetadata = {
       id: image.id,

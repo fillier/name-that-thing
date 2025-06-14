@@ -133,68 +133,105 @@ export const createPixelatedImage = (
   quality: number = 0.9
 ): Promise<Blob> => {
   return new Promise((resolve, reject) => {
-    const ctx = canvas.getContext('2d')
-    if (!ctx) {
-      reject(new Error('Could not get canvas context'))
-      return
-    }
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Timeout creating pixelated image with ${pixelSize}px pixels`))
+    }, 15000) // 15 second timeout
     
-    const { width, height } = canvas
-    const imageData = ctx.getImageData(0, 0, width, height)
-    const data = imageData.data
-    
-    // Create pixelated effect
-    for (let y = 0; y < height; y += pixelSize) {
-      for (let x = 0; x < width; x += pixelSize) {
-        // Get average color for the pixel block
-        let r = 0, g = 0, b = 0, a = 0, count = 0
-        
-        for (let dy = 0; dy < pixelSize && y + dy < height; dy++) {
-          for (let dx = 0; dx < pixelSize && x + dx < width; dx++) {
-            const idx = ((y + dy) * width + (x + dx)) * 4
-            r += data[idx]
-            g += data[idx + 1]
-            b += data[idx + 2]
-            a += data[idx + 3]
-            count++
-          }
-        }
-        
-        if (count > 0) {
-          r = Math.round(r / count)
-          g = Math.round(g / count)
-          b = Math.round(b / count)
-          a = Math.round(a / count)
+    try {
+      const ctx = canvas.getContext('2d')
+      if (!ctx) {
+        clearTimeout(timeoutId)
+        reject(new Error('Could not get canvas context'))
+        return
+      }
+      
+      const { width, height } = canvas
+      
+      // Validate canvas dimensions
+      if (width <= 0 || height <= 0) {
+        clearTimeout(timeoutId)
+        reject(new Error(`Invalid canvas dimensions: ${width}x${height}`))
+        return
+      }
+      
+      // Get image data with error handling
+      let imageData
+      try {
+        imageData = ctx.getImageData(0, 0, width, height)
+      } catch (error) {
+        clearTimeout(timeoutId)
+        reject(new Error(`Failed to get image data: ${error instanceof Error ? error.message : 'Unknown error'}`))
+        return
+      }
+      
+      const data = imageData.data
+      
+      // Create pixelated effect
+      for (let y = 0; y < height; y += pixelSize) {
+        for (let x = 0; x < width; x += pixelSize) {
+          // Get average color for the pixel block
+          let r = 0, g = 0, b = 0, a = 0, count = 0
           
-          // Fill the pixel block with average color
           for (let dy = 0; dy < pixelSize && y + dy < height; dy++) {
             for (let dx = 0; dx < pixelSize && x + dx < width; dx++) {
               const idx = ((y + dy) * width + (x + dx)) * 4
-              data[idx] = r
-              data[idx + 1] = g
-              data[idx + 2] = b
-              data[idx + 3] = a
+              r += data[idx]
+              g += data[idx + 1]
+              b += data[idx + 2]
+              a += data[idx + 3]
+              count++
+            }
+          }
+          
+          if (count > 0) {
+            r = Math.round(r / count)
+            g = Math.round(g / count)
+            b = Math.round(b / count)
+            a = Math.round(a / count)
+            
+            // Fill the pixel block with average color
+            for (let dy = 0; dy < pixelSize && y + dy < height; dy++) {
+              for (let dx = 0; dx < pixelSize && x + dx < width; dx++) {
+                const idx = ((y + dy) * width + (x + dx)) * 4
+                data[idx] = r
+                data[idx + 1] = g
+                data[idx + 2] = b
+                data[idx + 3] = a
+              }
             }
           }
         }
       }
+      
+      // Put the pixelated image data back with error handling
+      try {
+        ctx.putImageData(imageData, 0, 0)
+      } catch (error) {
+        clearTimeout(timeoutId)
+        reject(new Error(`Failed to put image data: ${error instanceof Error ? error.message : 'Unknown error'}`))
+        return
+      }
+      
+      // Convert to blob with enhanced error handling
+      canvas.toBlob(
+        (blob) => {
+          clearTimeout(timeoutId)
+          if (blob && blob.size > 0) {
+            console.log(`createPixelatedImage: Created blob with ${pixelSize}px pixels, size: ${blob.size}`)
+            resolve(blob)
+          } else {
+            console.error(`createPixelatedImage: Failed to create blob with ${pixelSize}px pixels, size: ${blob?.size || 0}`)
+            reject(new Error(`Failed to create pixelated blob with ${pixelSize}px pixels, size: ${blob?.size || 0}`))
+          }
+        },
+        'image/jpeg',
+        quality
+      )
+      
+    } catch (error) {
+      clearTimeout(timeoutId)
+      reject(new Error(`Unexpected error in createPixelatedImage: ${error instanceof Error ? error.message : 'Unknown error'}`))
     }
-    
-    // Put the pixelated image data back
-    ctx.putImageData(imageData, 0, 0)
-    
-    // Convert to blob
-    canvas.toBlob(
-      (blob) => {
-        if (blob) {
-          resolve(blob)
-        } else {
-          reject(new Error('Failed to create pixelated blob'))
-        }
-      },
-      'image/jpeg',
-      quality
-    )
   })
 }
 

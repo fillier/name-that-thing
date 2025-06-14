@@ -82,9 +82,9 @@ export function useImageUpload() {
           options?.onError?.(file.name, errorMessage)
         }
 
-        // Small delay to prevent UI blocking
+        // Small delay to prevent resource contention and allow memory cleanup
         if (i < fileArray.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 10))
+          await new Promise(resolve => setTimeout(resolve, 200)) // Increased from 10ms
         }
       }
 
