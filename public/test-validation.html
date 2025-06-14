@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Name That Thing - Validation Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .button:hover {
+            background: #0056b3;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            font-family: monospace;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .error {
+            color: #dc3545;
+        }
+        
+        .warning {
+            color: #ffc107;
+        }
+        
+        .success {
+            color: #28a745;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Name That Thing - Image Validation Test</h1>
+        
+        <div>
+            <button class="button" onclick="testValidation()">Test Image Validation</button>
+            <button class="button" onclick="clearLog()">Clear Log</button>
+            <button class="button" onclick="openMainApp()">Open Main App</button>
+        </div>
+        
+        <div id="log" class="log">Click "Test Image Validation" to check the database...</div>
+    </div>
+
+    <script>
+        let logElement = document.getElementById('log');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = `[${timestamp}] `;
+            const fullMessage = prefix + message;
+            
+            console.log(fullMessage);
+            
+            const div = document.createElement('div');
+            div.textContent = fullMessage;
+            if (type !== 'info') {
+                div.className = type;
+            }
+            logElement.appendChild(div);
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function clearLog() {
+            logElement.innerHTML = '';
+        }
+        
+        function openMainApp() {
+            window.open('/', '_blank');
+        }
+        
+        async function testValidation() {
+            try {
+                log('Starting image validation test...');
+                
+                // Open IndexedDB
+                const dbRequest = indexedDB.open('NameThatThingDB', 1);
+                
+                dbRequest.onerror = () => {
+                    log('Failed to open database: ' + dbRequest.error, 'error');
+                };
+                
+                dbRequest.onsuccess = async () => {
+                    const db = dbRequest.result;
+                    log('Database opened successfully');
+                    
+                    try {
+                        // Get all images
+                        const transaction = db.transaction(['images'], 'readonly');
+                        const store = transaction.objectStore('images');
+                        const getAllRequest = store.getAll();
+                        
+                        getAllRequest.onsuccess = async () => {
+                            const images = getAllRequest.result;
+                            log(`Found ${images.length} images in database`);
+                            
+                            for (const image of images) {
+                                log(`\\nChecking image: ${image.originalName}`);
+                                
+                                const levels = image.pixelationLevels;
+                                const level1Size = levels.level1?.size || 0;
+                                const level2Size = levels.level2?.size || 0;
+                                const level3Size = levels.level3?.size || 0;
+                                const level4Size = levels.level4?.size || 0;
+                                
+                                log(`  Level 1 (32px): ${level1Size} bytes`);
+                                log(`  Level 2 (16px): ${level2Size} bytes`);
+                                log(`  Level 3 (8px): ${level3Size} bytes`);
+                                log(`  Level 4 (original): ${level4Size} bytes`);
+                                
+                                const hasAllLevels = level1Size > 0 && level2Size > 0 && level3Size > 0 && level4Size > 0;
+                                
+                                if (hasAllLevels) {
+                                    log(`  ✓ Image is valid (all levels present)`, 'success');
+                                } else {
+                                    log(`  ✗ Image is INVALID (missing levels)`, 'error');
+                                    
+                                    // Check which levels are missing
+                                    const missing = [];
+                                    if (level1Size === 0) missing.push('level1');
+                                    if (level2Size === 0) missing.push('level2');
+                                    if (level3Size === 0) missing.push('level3');
+                                    if (level4Size === 0) missing.push('level4');
+                                    
+                                    log(`    Missing levels: ${missing.join(', ')}`, 'warning');
+                                }
+                            }
+                            
+                            log('\\nValidation test complete!');
+                        };
+                        
+                        getAllRequest.onerror = () => {
+                            log('Failed to get images: ' + getAllRequest.error, 'error');
+                        };
+                        
+                    } catch (error) {
+                        log('Error during validation: ' + error.message, 'error');
+                    }
+                };
+                
+            } catch (error) {
+                log('Error: ' + error.message, 'error');
+            }
+        }
+    </script>
+</body>
+</html>

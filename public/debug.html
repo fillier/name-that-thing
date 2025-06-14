@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexedDB Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; }
+        button { margin: 5px; padding: 8px 15px; }
+        .result { margin: 10px 0; padding: 10px; background: #f5f5f5; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>IndexedDB Debug Tool</h1>
+    
+    <div class="section">
+        <h2>Database Information</h2>
+        <button onclick="checkDatabase()">Check Database</button>
+        <button onclick="listAllData()">List All Data</button>
+        <button onclick="clearDatabase()">Clear Database</button>
+        <div id="dbResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Categories</h2>
+        <button onclick="listCategories()">List Categories</button>
+        <div id="categoriesResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Images</h2>
+        <button onclick="listImages()">List Images</button>
+        <div id="imagesResult" class="result"></div>
+    </div>
+
+    <div class="section">
+        <h2>Blobs</h2>
+        <button onclick="listBlobs()">List Blobs</button>
+        <div id="blobsResult" class="result"></div>
+    </div>
+
+    <script>
+        const DB_NAME = 'NameThatThingDB';
+        const DB_VERSION = 1;
+
+        async function openDatabase() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve(request.result);
+                
+                request.onupgradeneeded = (event) => {
+                    const db = event.target.result;
+                    
+                    // Create object stores if they don't exist
+                    if (!db.objectStoreNames.contains('categories')) {
+                        const categoryStore = db.createObjectStore('categories', { keyPath: 'id' });
+                        categoryStore.createIndex('name', 'name', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('images')) {
+                        const imageStore = db.createObjectStore('images', { keyPath: 'id' });
+                        imageStore.createIndex('categoryId', 'categoryId', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('blobs')) {
+                        const blobStore = db.createObjectStore('blobs', { keyPath: 'id' });
+                        blobStore.createIndex('imageId', 'imageId', { unique: false });
+                    }
+                    
+                    if (!db.objectStoreNames.contains('settings')) {
+                        db.createObjectStore('settings', { keyPath: 'key' });
+                    }
+                };
+            });
+        }
+
+        async function checkDatabase() {
+            const resultDiv = document.getElementById('dbResult');
+            try {
+                const db = await openDatabase();
+                const storeNames = Array.from(db.objectStoreNames);
+                
+                let info = `<div class="success">Database: ${DB_NAME} (Version ${db.version})</div>`;
+                info += `<div>Object Stores: ${storeNames.join(', ')}</div>`;
+                
+                // Check record counts
+                for (const storeName of storeNames) {
+                    const transaction = db.transaction(storeName, 'readonly');
+                    const store = transaction.objectStore(storeName);
+                    const countRequest = store.count();
+                    
+                    await new Promise((resolve) => {
+                        countRequest.onsuccess = () => {
+                            info += `<div>${storeName}: ${countRequest.result} records</div>`;
+                            resolve();
+                        };
+                    });
+                }
+                
+                resultDiv.innerHTML = info;
+                db.close();
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function listCategories() {
+            const resultDiv = document.getElementById('categoriesResult');
+            try {
+                const db = await openDatabase();
+                const transaction = db.transaction('categories', 'readonly');
+                const store = transaction.objectStore('categories');
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const categories = request.result;
+                    let html = `<div class="success">Found ${categories.length} categories:</div>`;
+                    
+                    categories.forEach(cat => {
+                        html += `<div>ID: ${cat.id}, Name: ${cat.name}, Images: ${cat.imageIds ? cat.imageIds.length : 0}</div>`;
+                    });
+                    
+                    resultDiv.innerHTML = html;
+                };
+                
+                db.close();
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function listImages() {
+            const resultDiv = document.getElementById('imagesResult');
+            try {
+                const db = await openDatabase();
+                const transaction = db.transaction('images', 'readonly');
+                const store = transaction.objectStore('images');
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const images = request.result;
+                    let html = `<div class="success">Found ${images.length} images:</div>`;
+                    
+                    images.forEach(img => {
+                        html += `<div>ID: ${img.id}, Name: ${img.originalName}, Category: ${img.categoryId}, Size: ${img.processedSize}</div>`;
+                    });
+                    
+                    resultDiv.innerHTML = html;
+                };
+                
+                db.close();
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function listBlobs() {
+            const resultDiv = document.getElementById('blobsResult');
+            try {
+                const db = await openDatabase();
+                const transaction = db.transaction('blobs', 'readonly');
+                const store = transaction.objectStore('blobs');
+                const request = store.getAll();
+                
+                request.onsuccess = () => {
+                    const blobs = request.result;
+                    let html = `<div class="success">Found ${blobs.length} blobs:</div>`;
+                    
+                    blobs.forEach(blob => {
+                        html += `<div>ID: ${blob.id}, Image: ${blob.imageId}, Level: ${blob.level}, Size: ${blob.blob.size}</div>`;
+                    });
+                    
+                    resultDiv.innerHTML = html;
+                };
+                
+                db.close();
+            } catch (error) {
+                resultDiv.innerHTML = `<div class="error">Error: ${error.message}</div>`;
+            }
+        }
+
+        async function listAllData() {
+            await checkDatabase();
+            await listCategories();
+            await listImages();
+            await listBlobs();
+        }
+
+        async function clearDatabase() {
+            if (confirm('Are you sure you want to clear all data?')) {
+                try {
+                    const db = await openDatabase();
+                    const storeNames = Array.from(db.objectStoreNames);
+                    
+                    const transaction = db.transaction(storeNames, 'readwrite');
+                    
+                    for (const storeName of storeNames) {
+                        const store = transaction.objectStore(storeName);
+                        store.clear();
+                    }
+                    
+                    await new Promise((resolve, reject) => {
+                        transaction.oncomplete = resolve;
+                        transaction.onerror = () => reject(transaction.error);
+                    });
+                    
+                    document.getElementById('dbResult').innerHTML = '<div class="success">Database cleared successfully</div>';
+                    db.close();
+                } catch (error) {
+                    document.getElementById('dbResult').innerHTML = `<div class="error">Error clearing database: ${error.message}</div>`;
+                }
+            }
+        }
+
+        // Auto-check database on load
+        window.onload = checkDatabase;
+    </script>
+</body>
+</html>
