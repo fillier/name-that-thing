@@ -28,13 +28,30 @@
               v-for="category in categoriesWithImageCount" 
               :key="category.id"
               class="category-card"
-              @click="selectCategory(category)"
               :class="{ active: selectedCategory?.id === category.id }"
             >
-              <h3>{{ category.name }}</h3>
-              <p v-if="category.description">{{ category.description }}</p>
-              <div class="category-stats">
-                <span class="image-count">{{ category.imageCount }} images</span>
+              <div class="category-content" @click="selectCategory(category)">
+                <h3>{{ category.name }}</h3>
+                <p v-if="category.description">{{ category.description }}</p>
+                <div class="category-stats">
+                  <span class="image-count">{{ category.imageCount }} images</span>
+                </div>
+              </div>
+              <div class="category-actions">
+                <button 
+                  @click.stop="openEditCategory(category)"
+                  class="btn btn-sm btn-secondary"
+                  title="Edit Category"
+                >
+                  ✏️ Edit
+                </button>
+                <button 
+                  @click.stop="confirmDeleteCategory(category)"
+                  class="btn btn-sm btn-danger"
+                  title="Delete Category"
+                >
+                  🗑️ Delete
+                </button>
               </div>
             </div>
           </div>
@@ -117,6 +134,69 @@
       </div>
     </div>
 
+    <!-- Edit Category Modal -->
+    <div v-if="showEditCategory" class="modal-overlay" @click="showEditCategory = false">
+      <div class="modal" @click.stop>
+        <header class="modal-header">
+          <h3>Edit Category</h3>
+          <button @click="showEditCategory = false" class="btn-close">&times;</button>
+        </header>
+        <form @submit.prevent="updateCategory" class="modal-body">
+          <div class="form-group">
+            <label for="editCategoryName">Category Name</label>
+            <input 
+              id="editCategoryName"
+              v-model="editCategory.name" 
+              type="text" 
+              required 
+              placeholder="e.g., Movies, Animals, Landmarks"
+            >
+          </div>
+          <div class="form-group">
+            <label for="editCategoryDescription">Description (optional)</label>
+            <textarea 
+              id="editCategoryDescription"
+              v-model="editCategory.description" 
+              placeholder="Brief description of this category"
+            ></textarea>
+          </div>
+          <div class="modal-actions">
+            <button type="button" @click="showEditCategory = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary" :disabled="!editCategory.name">
+              Update Category
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Delete Category Confirmation Modal -->
+    <div v-if="showDeleteConfirmation" class="modal-overlay" @click="showDeleteConfirmation = false">
+      <div class="modal" @click.stop>
+        <header class="modal-header">
+          <h3>Delete Category</h3>
+          <button @click="showDeleteConfirmation = false" class="btn-close">&times;</button>
+        </header>
+        <div class="modal-body">
+          <p>Are you sure you want to delete the category <strong>"{{ categoryToDelete?.name }}"</strong>?</p>
+          <p v-if="categoryToDelete && getCategoryImageCount(categoryToDelete.id) > 0" class="warning-text">
+            ⚠️ This will also delete <strong>{{ getCategoryImageCount(categoryToDelete.id) }} image(s)</strong> in this category.
+          </p>
+          <p class="text-muted">This action cannot be undone.</p>
+          <div class="modal-actions">
+            <button type="button" @click="showDeleteConfirmation = false" class="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="button" @click="deleteCategory" class="btn btn-danger">
+              Delete Category
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- File Upload Input -->
     <input 
       ref="fileInput"
@@ -168,6 +248,8 @@ const {
 // State
 const selectedCategory = ref<Category | null>(null)
 const showCreateCategory = ref(false)
+const showEditCategory = ref(false)
+const showDeleteConfirmation = ref(false)
 const showUploadProgress = ref(false)
 const fileInput = ref<HTMLInputElement>()
 const successfulUploads = ref(0)
@@ -175,6 +257,12 @@ const newCategory = ref({
   name: '',
   description: ''
 })
+const editCategory = ref({
+  id: '',
+  name: '',
+  description: ''
+})
+const categoryToDelete = ref<Category | null>(null)
 
 // Computed
 const categories = computed(() => categoriesStore.categories)
@@ -184,6 +272,10 @@ const categoryImages = computed(() => {
     ? categoriesStore.getImagesByCategory(selectedCategory.value.id)
     : []
 })
+
+const getCategoryImageCount = (categoryId: string) => {
+  return categoriesStore.getImagesByCategory(categoryId).length
+}
 
 // Methods
 const selectCategory = (category: Category) => {
@@ -204,6 +296,64 @@ const createCategory = async () => {
   } catch (error) {
     console.error('Failed to create category:', error)
     toast.error('Failed to create category. Please try again.')
+  }
+}
+
+const openEditCategory = (category: Category) => {
+  editCategory.value = {
+    id: category.id,
+    name: category.name,
+    description: category.description || ''
+  }
+  showEditCategory.value = true
+}
+
+const updateCategory = async () => {
+  try {
+    await categoriesStore.updateCategory(editCategory.value.id, {
+      name: editCategory.value.name,
+      description: editCategory.value.description || undefined
+    })
+    
+    showEditCategory.value = false
+    editCategory.value = { id: '', name: '', description: '' }
+    toast.success('Category updated successfully!')
+  } catch (error) {
+    console.error('Failed to update category:', error)
+    toast.error('Failed to update category. Please try again.')
+  }
+}
+
+const confirmDeleteCategory = (category: Category) => {
+  categoryToDelete.value = category
+  showDeleteConfirmation.value = true
+}
+
+const deleteCategory = async () => {
+  if (!categoryToDelete.value) return
+  
+  try {
+    const categoryName = categoryToDelete.value.name
+    const imageCount = getCategoryImageCount(categoryToDelete.value.id)
+    
+    await categoriesStore.deleteCategory(categoryToDelete.value.id)
+    
+    // Clear selected category if it was the one being deleted
+    if (selectedCategory.value?.id === categoryToDelete.value.id) {
+      selectedCategory.value = null
+    }
+    
+    showDeleteConfirmation.value = false
+    categoryToDelete.value = null
+    
+    if (imageCount > 0) {
+      toast.success(`Category "${categoryName}" and ${imageCount} image(s) deleted successfully!`)
+    } else {
+      toast.success(`Category "${categoryName}" deleted successfully!`)
+    }
+  } catch (error) {
+    console.error('Failed to delete category:', error)
+    toast.error('Failed to delete category. Please try again.')
   }
 }
 
@@ -375,9 +525,10 @@ onMounted(async () => {
   background: var(--surface);
   border: 2px solid var(--border);
   border-radius: 8px;
-  padding: 1rem;
-  cursor: pointer;
+  overflow: hidden;
   transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
   
   &:hover {
     border-color: var(--primary);
@@ -388,6 +539,12 @@ onMounted(async () => {
     border-color: var(--primary);
     background: var(--primary-light);
   }
+}
+
+.category-content {
+  padding: 1rem;
+  cursor: pointer;
+  flex: 1;
   
   h3 {
     margin: 0 0 0.5rem 0;
@@ -398,6 +555,24 @@ onMounted(async () => {
     margin: 0 0 1rem 0;
     color: var(--text-secondary);
     font-size: 0.9rem;
+  }
+}
+
+.category-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  
+  .btn {
+    flex: 1;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.85rem;
+    
+    &.btn-sm {
+      padding: 0.375rem 0.75rem;
+    }
   }
 }
 
@@ -538,5 +713,34 @@ onMounted(async () => {
   gap: 1rem;
   justify-content: flex-end;
   margin-top: 1.5rem;
+}
+
+.warning-text {
+  color: var(--warning, #f59e0b);
+  font-weight: 500;
+  margin: 1rem 0;
+  padding: 0.75rem;
+  background: var(--warning-light, rgba(245, 158, 11, 0.1));
+  border: 1px solid var(--warning-light, rgba(245, 158, 11, 0.2));
+  border-radius: 4px;
+}
+
+.text-muted {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+.modal-body p {
+  margin: 0.75rem 0;
+  line-height: 1.5;
+  
+  &:first-child {
+    margin-top: 0;
+  }
+  
+  &:last-child {
+    margin-bottom: 0;
+  }
 }
 </style>
