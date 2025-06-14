@@ -1,0 +1,36 @@
+# Docker Compose for Name That Thing
+# For local development and testing
+
+version: '3.8'
+
+services:
+  name-that-thing:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    
+    # Health check
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy for production-like setup
+  nginx-proxy:
+    image: nginx:alpine
+    ports:
+      - "80:80"
+    volumes:
+      - ./proxy.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - name-that-thing
+    restart: unless-stopped
+    profiles:
+      - proxy

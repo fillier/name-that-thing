@@ -7,7 +7,12 @@
     "dev": "vite",
     "build": "vue-tsc && vite build",
     "preview": "vite preview",
-    "type-check": "vue-tsc --noEmit"
+    "type-check": "vue-tsc --noEmit",
+    "docker:build": "docker build -t name-that-thing:latest .",
+    "docker:run": "docker run -d -p 8080:80 --name name-that-thing name-that-thing:latest",
+    "docker:stop": "docker stop name-that-thing && docker rm name-that-thing",
+    "docker:dev": "docker-compose up -d",
+    "docker:down": "docker-compose down"
   },
   "dependencies": {
     "@types/node": "^24.0.1",
