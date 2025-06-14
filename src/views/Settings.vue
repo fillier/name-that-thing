@@ -100,7 +100,6 @@
                     max="128"
                     step="4"
                   >
-                  <small>{{ settings.pixelationLevel1 }}px</small>
                 </div>
                 
                 <div class="pixelation-input">
@@ -113,7 +112,6 @@
                     max="128"
                     step="4"
                   >
-                  <small>{{ settings.pixelationLevel2 }}px</small>
                 </div>
                 
                 <div class="pixelation-input">
@@ -126,10 +124,8 @@
                     max="128"
                     step="4"
                   >
-                  <small>{{ settings.pixelationLevel3 }}px</small>
                 </div>
               </div>
-              <small>Level 4 is always the original image (no pixelation)</small>
             </div>
             
             <div class="form-actions">
@@ -506,27 +502,26 @@ onMounted(async () => {
 
 .pixelation-controls-horizontal {
   display: flex;
-  gap: 1.5rem;
+  gap: 1rem;
   margin-top: 0.5rem;
-  flex-wrap: wrap;
 }
 
 .pixelation-input {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  min-width: 120px;
+  flex: 1;
   
   label {
     font-size: 0.9rem;
     font-weight: 500;
-    margin-bottom: 0.25rem;
+    margin-bottom: 0.5rem;
     color: var(--text-primary);
+    text-align: center;
   }
   
   input[type="number"] {
-    width: 80px;
-    padding: 0.5rem;
+    width: 100%;
+    padding: 0.75rem;
     border: 1px solid var(--border);
     border-radius: 4px;
     text-align: center;
@@ -536,13 +531,6 @@ onMounted(async () => {
       outline: none;
       border-color: var(--primary);
     }
-  }
-  
-  small {
-    margin-top: 0.25rem;
-    font-size: 0.75rem;
-    color: var(--text-secondary);
-    text-align: center;
   }
 }
 
