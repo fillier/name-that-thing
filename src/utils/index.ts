@@ -37,7 +37,7 @@ export const formatDate = (date: Date): string => {
  * Validate image file type
  */
 export const isValidImageType = (file: File): boolean => {
-  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp']
+  const validTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif']
   return validTypes.includes(file.type)
 }
 

@@ -32,7 +32,7 @@ export class ImageProcessingService {
       if (!isValidImageType(file)) {
         return {
           success: false,
-          error: `Invalid file type. Supported types: JPG, PNG, GIF, WebP`
+          error: `Invalid file type. Supported types: JPG, PNG, GIF, WebP, AVIF`
         }
       }
 

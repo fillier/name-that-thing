@@ -32,7 +32,7 @@ This is a Vue.js 3 web application for an interactive guessing game called "Name
 - Images are processed client-side using Canvas API
 - All data stored locally in IndexedDB
 - Maximum image width of 1280px
-- Support for JPG, PNG, GIF, WebP formats
+- Support for JPG, PNG, GIF, WebP, AVIF formats
 - Progressive pixelation: 8x8 → 16x16 → 32x32 → original
 - File-based export/import using JSON format
 

@@ -36,22 +36,22 @@
 ┌─────────────────────────────────────────────────────────────┐
 │                    Name That Thing                          │
 ├─────────────────────────────────────────────────────────────┤
-│  Presentation Layer (Vue.js Components)                    │
+│  Presentation Layer (Vue.js Components)                     │
 ├─────────────────────────────────────────────────────────────┤
-│  Business Logic Layer                                      │
-│  ├─ Game State Management (Pinia)                         │
-│  ├─ Image Processing Service                              │
-│  ├─ Category Management Service                           │
-│  └─ File I/O Service                                      │
+│  Business Logic Layer                                       │
+│  ├─ Game State Management (Pinia)                           │
+│  ├─ Image Processing Service                                │
+│  ├─ Category Management Service                             │
+│  └─ File I/O Service                                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Data Layer                                               │
-│  ├─ IndexedDB (Images & Metadata)                        │
-│  └─ JSON Export/Import                                    │
+│  Data Layer                                                 │
+│  ├─ IndexedDB (Images & Metadata)                           │
+│  └─ JSON Export/Import                                      │
 ├─────────────────────────────────────────────────────────────┤
-│  Browser APIs                                             │
-│  ├─ Canvas API (Image Processing)                        │
-│  ├─ File API (Upload/Download)                           │
-│  └─ IndexedDB API (Persistence)                          │
+│  Browser APIs                                               │
+│  ├─ Canvas API (Image Processing)                           │
+│  ├─ File API (Upload/Download)                              │
+│  └─ IndexedDB API (Persistence)                             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -204,8 +204,8 @@ interface GameState {
 │                                                             │
 │  Setup Mode:                Game Mode:                      │
 │  ├─ Category List           ├─ Large Image Display          │
-│  ├─ Image Grid             ├─ Pixelation Controls           │
-│  └─ Upload Area            └─ Game Progress                 │
+│  ├─ Image Grid              ├─ Pixelation Controls          │
+│  └─ Upload Area             └─ Game Progress                │
 │                                                             │
 ├─────────────────────────────────────────────────────────────┤
 │                    Footer/Controls                          │

@@ -130,8 +130,8 @@ export function useImageUpload() {
 
     for (const file of fileArray) {
       // Check file type
-      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)) {
-        invalid.push({ file, reason: 'Invalid file type. Only JPG, PNG, GIF, and WebP are supported.' })
+      if (!['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp', 'image/avif'].includes(file.type)) {
+        invalid.push({ file, reason: 'Invalid file type. Only JPG, PNG, GIF, WebP, and AVIF are supported.' })
         continue
       }
 
