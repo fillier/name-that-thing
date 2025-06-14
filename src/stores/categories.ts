@@ -113,14 +113,16 @@ export const useCategoriesStore = defineStore('categories', () => {
       loading.value = true
       error.value = null
 
-      // Add image to state
-      images.value.push(image)
+      // First save to database before updating reactive state
+      // This ensures UI doesn't update if database save fails
+      await db.saveImage(image)
 
-      // Update category's imageIds
+      // Update category in database
       const categoryIndex = categories.value.findIndex((cat: Category) => cat.id === categoryId)
       if (categoryIndex !== -1) {
-        categories.value[categoryIndex].imageIds.push(image.id)
-        categories.value[categoryIndex].updatedAt = new Date()
+        // Create updated category data
+        const updatedImageIds = [...categories.value[categoryIndex].imageIds, image.id]
+        const updatedAt = new Date()
         
         // Create a clean copy for database storage
         const categoryToSave = {
@@ -130,10 +132,8 @@ export const useCategoriesStore = defineStore('categories', () => {
           createdAt: categories.value[categoryIndex].createdAt instanceof Date 
             ? categories.value[categoryIndex].createdAt.toISOString()
             : categories.value[categoryIndex].createdAt,
-          updatedAt: categories.value[categoryIndex].updatedAt instanceof Date 
-            ? categories.value[categoryIndex].updatedAt.toISOString()
-            : categories.value[categoryIndex].updatedAt,
-          imageIds: categories.value[categoryIndex].imageIds,
+          updatedAt: updatedAt.toISOString(),
+          imageIds: updatedImageIds,
           settings: categories.value[categoryIndex].settings ? {
             shuffleImages: categories.value[categoryIndex].settings.shuffleImages,
             showFileName: categories.value[categoryIndex].settings.showFileName
@@ -141,10 +141,14 @@ export const useCategoriesStore = defineStore('categories', () => {
         }
         
         await db.saveCategory(categoryToSave)
+        
+        // Only update reactive state after successful database saves
+        categories.value[categoryIndex].imageIds = updatedImageIds
+        categories.value[categoryIndex].updatedAt = updatedAt
       }
 
-      // Save to IndexedDB
-      await db.saveImage(image)
+      // Only add image to reactive state after all database operations succeed
+      images.value.push(image)
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Failed to add image'
       throw err

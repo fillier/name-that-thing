@@ -402,11 +402,17 @@ const handleFileUpload = async (event: Event) => {
         0 // Level 4 is always original (0)
       ],
       onImageProcessed: async (image) => {
-        // Add processed image to store
+        // Add processed image to store and wait for database save to complete
         console.log('Processing image:', image.originalName, 'for category:', selectedCategory.value!.id)
-        await categoriesStore.addImageToCategory(selectedCategory.value!.id, image)
-        console.log('Image added to store. Total images now:', categoriesStore.images.length)
-        successfulUploads.value += 1
+        try {
+          await categoriesStore.addImageToCategory(selectedCategory.value!.id, image)
+          console.log('Image successfully saved to database and added to store. Total images now:', categoriesStore.images.length)
+          successfulUploads.value += 1
+        } catch (error) {
+          console.error('Failed to save image to database:', error)
+          // Don't increment successfulUploads if save failed
+          throw error // Re-throw to be handled by upload error handling
+        }
       },
       onError: (fileName, error) => {
         console.error(`Failed to process ${fileName}:`, error)
@@ -423,12 +429,6 @@ const handleFileUpload = async (event: Event) => {
       toast.warning(`Added ${successCount} images, ${failedCount} failed`)
     } else {
       toast.error('All images failed to process')
-    }
-
-    // Force reload categories and images to ensure UI updates
-    if (successCount > 0) {
-      console.log('Reloading categories after successful uploads...')
-      await categoriesStore.loadCategories()
     }
 
     console.log(`Upload complete: ${successCount} successful, ${failedCount} failed`)

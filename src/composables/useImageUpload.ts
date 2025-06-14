@@ -73,7 +73,26 @@ export function useImageUpload() {
             // The ImageProcessingService already validates pixelation levels internally
             // No need for additional validation here as it can cause false positives
             successful.push(result.processedImage)
-            options?.onImageProcessed?.(result.processedImage)
+            
+            // Wait for onImageProcessed callback to complete (including database save)
+            // before continuing to ensure UI doesn't update before save is complete
+            if (options?.onImageProcessed) {
+              try {
+                await options.onImageProcessed(result.processedImage)
+              } catch (callbackError) {
+                // If the callback fails (e.g., database save fails), treat as upload error
+                const errorMessage = callbackError instanceof Error ? callbackError.message : 'Failed to save image'
+                const errorObj = { fileName: file.name, error: `Processing completed but save failed: ${errorMessage}` }
+                failed.push(errorObj)
+                uploadErrors.value.push(errorObj)
+                options?.onError?.(file.name, errorMessage)
+                // Remove from successful since save failed
+                const index = successful.indexOf(result.processedImage)
+                if (index > -1) {
+                  successful.splice(index, 1)
+                }
+              }
+            }
           } else {
             const error = { fileName: file.name, error: result.error || 'Unknown error' }
             failed.push(error)
