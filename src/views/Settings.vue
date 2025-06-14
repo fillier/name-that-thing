@@ -88,12 +88,10 @@
             </div>
             
             <div class="form-group">
-              <h4>Pixelation Levels</h4>
-              <small>Configure how pixelated each level appears (higher = more pixelated)</small>
-              
-              <div class="pixelation-controls">
-                <div class="pixelation-level">
-                  <label for="pixelationLevel1">Level 1 (Most pixelated)</label>
+              <label>Pixelation Levels (higher = more pixelated)</label>
+              <div class="pixelation-controls-horizontal">
+                <div class="pixelation-input">
+                  <label for="pixelationLevel1">Level 1</label>
                   <input 
                     id="pixelationLevel1"
                     v-model.number="settings.pixelationLevel1"
@@ -102,11 +100,11 @@
                     max="128"
                     step="4"
                   >
-                  <small>Current: {{ settings.pixelationLevel1 }}px blocks</small>
+                  <small>{{ settings.pixelationLevel1 }}px</small>
                 </div>
                 
-                <div class="pixelation-level">
-                  <label for="pixelationLevel2">Level 2 (Moderately pixelated)</label>
+                <div class="pixelation-input">
+                  <label for="pixelationLevel2">Level 2</label>
                   <input 
                     id="pixelationLevel2"
                     v-model.number="settings.pixelationLevel2"
@@ -115,11 +113,11 @@
                     max="128"
                     step="4"
                   >
-                  <small>Current: {{ settings.pixelationLevel2 }}px blocks</small>
+                  <small>{{ settings.pixelationLevel2 }}px</small>
                 </div>
                 
-                <div class="pixelation-level">
-                  <label for="pixelationLevel3">Level 3 (Slightly pixelated)</label>
+                <div class="pixelation-input">
+                  <label for="pixelationLevel3">Level 3</label>
                   <input 
                     id="pixelationLevel3"
                     v-model.number="settings.pixelationLevel3"
@@ -128,15 +126,10 @@
                     max="128"
                     step="4"
                   >
-                  <small>Current: {{ settings.pixelationLevel3 }}px blocks</small>
-                </div>
-                
-                <div class="pixelation-level">
-                  <label>Level 4 (Original image)</label>
-                  <input type="text" value="Original (no pixelation)" disabled>
-                  <small>Always shows the original, unmodified image</small>
+                  <small>{{ settings.pixelationLevel3 }}px</small>
                 </div>
               </div>
+              <small>Level 4 is always the original image (no pixelation)</small>
             </div>
             
             <div class="form-actions">
@@ -509,6 +502,48 @@ onMounted(async () => {
   margin-top: 0.5rem;
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.pixelation-controls-horizontal {
+  display: flex;
+  gap: 1.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pixelation-input {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 120px;
+  
+  label {
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+    color: var(--text-primary);
+  }
+  
+  input[type="number"] {
+    width: 80px;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    text-align: center;
+    font-size: 1rem;
+    
+    &:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+  }
+  
+  small {
+    margin-top: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    text-align: center;
+  }
 }
 
 .form-actions {
