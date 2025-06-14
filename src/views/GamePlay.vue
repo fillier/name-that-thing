@@ -12,7 +12,7 @@
         <button @click="$router.push('/setup')" class="btn btn-secondary" aria-label="Go back to setup">
           ← Back to Setup
         </button>
-        <h1>{{ currentCategory?.name || 'Game' }}</h1>
+        <AppLogo size="small" :text="currentCategory?.name || 'Game'" />
       </div>
       <div class="header-right">
         <button @click="toggleFullscreen" class="btn btn-primary" aria-label="Enter fullscreen mode">
@@ -146,6 +146,7 @@ import { computed, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useGameStore } from '@/stores/game'
 import ImageDisplay from '@/components/game/ImageDisplay.vue'
+import AppLogo from '@/components/common/AppLogo.vue'
 
 const router = useRouter()
 const gameStore = useGameStore()

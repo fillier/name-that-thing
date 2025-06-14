@@ -5,7 +5,7 @@
         <button @click="$router.push('/setup')" class="btn btn-secondary">
           ← Back to Setup
         </button>
-        <h1>Settings</h1>
+        <AppLogo size="small" />
       </div>
     </header>
 
@@ -146,8 +146,12 @@
         <div class="settings-section">
           <h2>About</h2>
           <div class="about-card">
-            <h3>Name That Thing</h3>
-            <p>Version 1.0.0</p>
+            <div class="about-header">
+              <AppLogo size="small" show-text />
+              <div class="version-info">
+                <p>Version 1.0.0</p>
+              </div>
+            </div>
             <p>An interactive guessing game for presentations and group activities.</p>
             <div class="about-links">
               <a 
@@ -211,6 +215,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useToast } from '@/composables/useToast'
 import { db } from '@/services/database'
 import { downloadFile, readFileAsText } from '@/utils'
+import AppLogo from '@/components/common/AppLogo.vue'
 
 const categoriesStore = useCategoriesStore()
 const settingsStore = useSettingsStore()
@@ -624,6 +629,19 @@ onMounted(async () => {
   border-radius: 8px;
   padding: 1.5rem;
   
+  .about-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+    
+    .version-info p {
+      margin: 0;
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+  }
+  
   h3 {
     margin: 0 0 0.5rem 0;
     color: var(--primary);
@@ -632,6 +650,10 @@ onMounted(async () => {
   p {
     margin: 0.5rem 0;
     color: var(--text-secondary);
+    
+    &:last-of-type {
+      margin-bottom: 1rem;
+    }
   }
 }
 

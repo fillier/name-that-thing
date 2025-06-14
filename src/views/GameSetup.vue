@@ -1,7 +1,7 @@
 <template>
   <div class="game-setup">
     <header class="setup-header">
-      <h1>Name That Thing</h1>
+      <AppLogo size="medium" />
       <div class="header-actions">
         <button @click="$router.push('/settings')" class="btn btn-secondary">
           Settings
@@ -228,6 +228,7 @@ import { useGameStore } from '@/stores/game'
 import { useSettingsStore } from '@/stores/settings'
 import { useImageUpload } from '@/composables/useImageUpload'
 import { useToast } from '@/composables/useToast'
+import AppLogo from '@/components/common/AppLogo.vue'
 import UploadProgress from '@/components/setup/UploadProgress.vue'
 import ImageThumbnail from '@/components/setup/ImageThumbnail.vue'
 import type { Category } from '@/types'
