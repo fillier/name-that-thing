@@ -150,8 +150,22 @@
             <p>Version 1.0.0</p>
             <p>An interactive guessing game for presentations and group activities.</p>
             <div class="about-links">
-              <a href="#" class="btn btn-secondary btn-sm">Documentation</a>
-              <a href="#" class="btn btn-secondary btn-sm">Report Issue</a>
+              <a 
+                href="https://github.com/fillier/name-that-thing/blob/main/README.md" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-secondary btn-sm"
+              >
+                📚 Documentation
+              </a>
+              <a 
+                href="https://github.com/fillier/name-that-thing/issues/new" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                class="btn btn-secondary btn-sm"
+              >
+                🐛 Report Issue
+              </a>
             </div>
           </div>
         </div>
