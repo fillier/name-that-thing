@@ -87,6 +87,58 @@
               <small>Lower values create smaller files but reduce image quality</small>
             </div>
             
+            <div class="form-group">
+              <h4>Pixelation Levels</h4>
+              <small>Configure how pixelated each level appears (higher = more pixelated)</small>
+              
+              <div class="pixelation-controls">
+                <div class="pixelation-level">
+                  <label for="pixelationLevel1">Level 1 (Most pixelated)</label>
+                  <input 
+                    id="pixelationLevel1"
+                    v-model.number="settings.pixelationLevel1"
+                    type="number"
+                    min="4"
+                    max="128"
+                    step="4"
+                  >
+                  <small>Current: {{ settings.pixelationLevel1 }}px blocks</small>
+                </div>
+                
+                <div class="pixelation-level">
+                  <label for="pixelationLevel2">Level 2 (Moderately pixelated)</label>
+                  <input 
+                    id="pixelationLevel2"
+                    v-model.number="settings.pixelationLevel2"
+                    type="number"
+                    min="4"
+                    max="128"
+                    step="4"
+                  >
+                  <small>Current: {{ settings.pixelationLevel2 }}px blocks</small>
+                </div>
+                
+                <div class="pixelation-level">
+                  <label for="pixelationLevel3">Level 3 (Slightly pixelated)</label>
+                  <input 
+                    id="pixelationLevel3"
+                    v-model.number="settings.pixelationLevel3"
+                    type="number"
+                    min="4"
+                    max="128"
+                    step="4"
+                  >
+                  <small>Current: {{ settings.pixelationLevel3 }}px blocks</small>
+                </div>
+                
+                <div class="pixelation-level">
+                  <label>Level 4 (Original image)</label>
+                  <input type="text" value="Original (no pixelation)" disabled>
+                  <small>Always shows the original, unmodified image</small>
+                </div>
+              </div>
+            </div>
+            
             <div class="form-actions">
               <button @click="resetToDefaults" class="btn btn-secondary">
                 Reset to Defaults
@@ -465,6 +517,40 @@ onMounted(async () => {
   margin-top: 2rem;
   padding-top: 1rem;
   border-top: 1px solid var(--border);
+}
+
+.pixelation-controls {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.pixelation-level {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  
+  label {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+  }
+  
+  input {
+    margin-top: 0.5rem;
+    
+    &:disabled {
+      background: var(--bg-secondary);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+    }
+  }
+  
+  small {
+    margin-top: 0.25rem;
+    font-style: italic;
+  }
 }
 
 .about-card {

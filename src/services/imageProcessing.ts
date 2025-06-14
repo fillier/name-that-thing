@@ -11,7 +11,7 @@ import {
 } from '@/utils'
 
 export class ImageProcessingService {
-  private static readonly PIXELATION_LEVELS = [64, 32, 16, 0] // 0 means original, higher numbers are more pixelated
+  private static readonly DEFAULT_PIXELATION_LEVELS = [64, 32, 16, 0] // 0 means original, higher numbers are more pixelated
   private static readonly DEFAULT_MAX_WIDTH = 1280
   private static readonly DEFAULT_MIN_WIDTH = 800
   private static readonly DEFAULT_QUALITY = 0.9
@@ -24,7 +24,8 @@ export class ImageProcessingService {
     categoryId: string,
     maxWidth: number = ImageProcessingService.DEFAULT_MAX_WIDTH,
     quality: number = ImageProcessingService.DEFAULT_QUALITY,
-    minWidth: number = ImageProcessingService.DEFAULT_MIN_WIDTH
+    minWidth: number = ImageProcessingService.DEFAULT_MIN_WIDTH,
+    pixelSizes: number[] = ImageProcessingService.DEFAULT_PIXELATION_LEVELS
   ): Promise<ImageProcessingResult> {
     try {
       // Validate file
@@ -51,7 +52,8 @@ export class ImageProcessingService {
       // Create pixelation levels
       const pixelationLevels = await ImageProcessingService.createPixelationLevels(
         canvas,
-        quality
+        quality,
+        pixelSizes
       )
 
       // Final validation to ensure all levels are present and valid
@@ -104,6 +106,7 @@ export class ImageProcessingService {
     maxWidth?: number,
     quality?: number,
     minWidth?: number,
+    pixelSizes?: number[],
     onProgress?: (current: number, total: number) => void
   ): Promise<{
     successful: GameImage[]
@@ -122,7 +125,8 @@ export class ImageProcessingService {
           categoryId,
           maxWidth,
           quality,
-          minWidth
+          minWidth,
+          pixelSizes
         )
 
         if (result.success && result.processedImage) {
@@ -157,6 +161,7 @@ export class ImageProcessingService {
       maxWidth?: number
       minWidth?: number
       quality?: number
+      pixelSizes?: number[]
       batchSize?: number
       onProgress?: (processed: number, total: number) => void
       onImageComplete?: (result: ImageProcessingResult, index: number) => void
@@ -166,6 +171,7 @@ export class ImageProcessingService {
       maxWidth = ImageProcessingService.DEFAULT_MAX_WIDTH,
       minWidth = ImageProcessingService.DEFAULT_MIN_WIDTH,
       quality = ImageProcessingService.DEFAULT_QUALITY,
+      pixelSizes = ImageProcessingService.DEFAULT_PIXELATION_LEVELS,
       onProgress,
       onImageComplete
     } = options
@@ -186,7 +192,8 @@ export class ImageProcessingService {
           categoryId,
           maxWidth,
           quality,
-          minWidth
+          minWidth,
+          pixelSizes
         )
         
         results.push(result)
@@ -221,12 +228,13 @@ export class ImageProcessingService {
   private static async createPixelationLevels(
     canvas: HTMLCanvasElement,
     quality: number,
+    pixelSizes: number[] = ImageProcessingService.DEFAULT_PIXELATION_LEVELS,
     retryCount: number = 0
   ): Promise<GameImage['pixelationLevels']> {
     const maxRetries = 5 // Increased from 3 to 5 retries for better reliability
     
     try {
-      const result = await this.createPixelationLevelsInternal(canvas, quality)
+      const result = await this.createPixelationLevelsInternal(canvas, quality, pixelSizes)
       
       // Double-check validation after successful creation
       const isValid = this.validatePixelationLevels(result)
@@ -253,7 +261,7 @@ export class ImageProcessingService {
           console.log(`ImageProcessingService: Reducing quality to ${retryQuality} for retry ${retryCount + 1}`)
         }
         
-        return this.createPixelationLevels(canvas, retryQuality, retryCount + 1)
+        return this.createPixelationLevels(canvas, retryQuality, pixelSizes, retryCount + 1)
       } else {
         console.error(`ImageProcessingService: Failed to create pixelation levels after ${maxRetries} retries:`, error)
         
@@ -277,15 +285,16 @@ export class ImageProcessingService {
    */
   private static async createPixelationLevelsInternal(
     canvas: HTMLCanvasElement,
-    quality: number
+    quality: number,
+    pixelSizes: number[] = ImageProcessingService.DEFAULT_PIXELATION_LEVELS
   ): Promise<GameImage['pixelationLevels']> {
     const levels: GameImage['pixelationLevels'] = {} as GameImage['pixelationLevels']
     
     console.log('ImageProcessingService: Starting pixelation level creation with enhanced validation')
     
     // Create a copy of the canvas for each level with enhanced error handling and validation
-    for (let i = 0; i < ImageProcessingService.PIXELATION_LEVELS.length; i++) {
-      const pixelSize = ImageProcessingService.PIXELATION_LEVELS[i]
+    for (let i = 0; i < pixelSizes.length; i++) {
+      const pixelSize = pixelSizes[i]
       const levelKey = `level${i + 1}` as keyof GameImage['pixelationLevels']
       
       console.log(`ImageProcessingService: Creating ${levelKey} with pixel size ${pixelSize}`)

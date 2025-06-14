@@ -8,6 +8,12 @@ export interface AppSettings {
   minImageSize: number
   compressionQuality: number
   
+  // Pixelation Settings (higher numbers = more pixelated)
+  pixelationLevel1: number  // Most pixelated
+  pixelationLevel2: number  // Moderately pixelated
+  pixelationLevel3: number  // Slightly pixelated
+  // Level 4 is always original (0)
+  
   // Game Settings
   showProgress: boolean
   autoAdvance: boolean
@@ -17,6 +23,9 @@ const DEFAULT_SETTINGS: AppSettings = {
   maxImageSize: 1280,
   minImageSize: 800,
   compressionQuality: 0.9,
+  pixelationLevel1: 64,  // Most pixelated
+  pixelationLevel2: 32,  // Moderately pixelated
+  pixelationLevel3: 16,  // Slightly pixelated
   showProgress: true,
   autoAdvance: false
 }
@@ -120,6 +129,28 @@ export const useSettingsStore = defineStore('settings', () => {
         validSettings.compressionQuality = importedSettings.compressionQuality
       }
       
+      // Validate pixelation levels (4-128 range, must be integers)
+      if (typeof importedSettings.pixelationLevel1 === 'number' && 
+          importedSettings.pixelationLevel1 >= 4 && 
+          importedSettings.pixelationLevel1 <= 128 &&
+          Number.isInteger(importedSettings.pixelationLevel1)) {
+        validSettings.pixelationLevel1 = importedSettings.pixelationLevel1
+      }
+      
+      if (typeof importedSettings.pixelationLevel2 === 'number' && 
+          importedSettings.pixelationLevel2 >= 4 && 
+          importedSettings.pixelationLevel2 <= 128 &&
+          Number.isInteger(importedSettings.pixelationLevel2)) {
+        validSettings.pixelationLevel2 = importedSettings.pixelationLevel2
+      }
+      
+      if (typeof importedSettings.pixelationLevel3 === 'number' && 
+          importedSettings.pixelationLevel3 >= 4 && 
+          importedSettings.pixelationLevel3 <= 128 &&
+          Number.isInteger(importedSettings.pixelationLevel3)) {
+        validSettings.pixelationLevel3 = importedSettings.pixelationLevel3
+      }
+      
       if (typeof importedSettings.showProgress === 'boolean') {
         validSettings.showProgress = importedSettings.showProgress
       }
@@ -178,6 +209,9 @@ export const getSettings = (): AppSettings => {
     maxImageSize: store.settings.maxImageSize,
     minImageSize: store.settings.minImageSize,
     compressionQuality: store.settings.compressionQuality,
+    pixelationLevel1: store.settings.pixelationLevel1,
+    pixelationLevel2: store.settings.pixelationLevel2,
+    pixelationLevel3: store.settings.pixelationLevel3,
     showProgress: store.settings.showProgress,
     autoAdvance: store.settings.autoAdvance
   }

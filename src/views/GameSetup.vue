@@ -395,6 +395,12 @@ const handleFileUpload = async (event: Event) => {
       maxWidth: settingsStore.settings.maxImageSize,
       minWidth: settingsStore.settings.minImageSize,
       quality: settingsStore.settings.compressionQuality,
+      pixelSizes: [
+        settingsStore.settings.pixelationLevel1,
+        settingsStore.settings.pixelationLevel2,
+        settingsStore.settings.pixelationLevel3,
+        0 // Level 4 is always original (0)
+      ],
       onImageProcessed: async (image) => {
         // Add processed image to store
         console.log('Processing image:', image.originalName, 'for category:', selectedCategory.value!.id)
