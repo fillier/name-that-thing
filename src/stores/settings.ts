@@ -13,10 +13,6 @@ export interface AppSettings {
   pixelationLevel2: number  // Moderately pixelated
   pixelationLevel3: number  // Slightly pixelated
   // Level 4 is always original (0)
-  
-  // Game Settings
-  showProgress: boolean
-  autoAdvance: boolean
 }
 
 const DEFAULT_SETTINGS: AppSettings = {
@@ -26,8 +22,6 @@ const DEFAULT_SETTINGS: AppSettings = {
   pixelationLevel1: 64,  // Most pixelated
   pixelationLevel2: 32,  // Moderately pixelated
   pixelationLevel3: 16,  // Slightly pixelated
-  showProgress: true,
-  autoAdvance: false
 }
 
 const STORAGE_KEY = 'name-that-thing-settings'
@@ -151,13 +145,7 @@ export const useSettingsStore = defineStore('settings', () => {
         validSettings.pixelationLevel3 = importedSettings.pixelationLevel3
       }
       
-      if (typeof importedSettings.showProgress === 'boolean') {
-        validSettings.showProgress = importedSettings.showProgress
-      }
-      
-      if (typeof importedSettings.autoAdvance === 'boolean') {
-        validSettings.autoAdvance = importedSettings.autoAdvance
-      }
+
       
       await updateSettings(validSettings)
       return validSettings
@@ -211,8 +199,6 @@ export const getSettings = (): AppSettings => {
     compressionQuality: store.settings.compressionQuality,
     pixelationLevel1: store.settings.pixelationLevel1,
     pixelationLevel2: store.settings.pixelationLevel2,
-    pixelationLevel3: store.settings.pixelationLevel3,
-    showProgress: store.settings.showProgress,
-    autoAdvance: store.settings.autoAdvance
+    pixelationLevel3: store.settings.pixelationLevel3
   }
 }

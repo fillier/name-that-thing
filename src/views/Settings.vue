@@ -140,31 +140,6 @@
         </div>
 
         <div class="settings-section">
-          <h2>Game Settings</h2>
-          <div class="settings-form">
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input 
-                  v-model="settings.showProgress"
-                  type="checkbox"
-                >
-                Show game progress during gameplay
-              </label>
-            </div>
-            
-            <div class="form-group">
-              <label class="checkbox-label">
-                <input 
-                  v-model="settings.autoAdvance"
-                  type="checkbox"
-                >
-                Auto-advance to next image when fully revealed
-              </label>
-            </div>
-          </div>
-        </div>
-
-        <div class="settings-section">
           <h2>About</h2>
           <div class="about-card">
             <h3>Name That Thing</h3>
