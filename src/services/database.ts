@@ -415,53 +415,97 @@ export class DatabaseService {
 
   // Export/Import operations
   async exportData(): Promise<ExportData> {
-    const categories = await this.getCategories()
-    const images = await this.getImages()
-    
-    // Convert blobs to base64
-    const blobs: Record<string, string> = {}
-    for (const image of images) {
-      for (const [level, blob] of Object.entries(image.pixelationLevels)) {
-        if (blob) {  // Only process non-null blobs
-          const base64 = await this.blobToBase64(blob)
-          blobs[`${image.id}_${level}`] = base64
+    try {
+      const categories = await this.getCategories()
+      const images = await this.getImages()
+      
+      console.log(`Exporting ${categories.length} categories and ${images.length} images`)
+      
+      // Convert blobs to base64
+      const blobs: Record<string, string> = {}
+      for (const image of images) {
+        for (const [level, blob] of Object.entries(image.pixelationLevels)) {
+          if (blob && blob.size > 0) {  // Only process non-null, non-empty blobs
+            try {
+              const base64 = await this.blobToBase64(blob)
+              blobs[`${image.id}_${level}`] = base64
+            } catch (error) {
+              console.warn(`Failed to convert blob for image ${image.id} level ${level}:`, error)
+              // Continue with other blobs even if one fails
+            }
+          }
         }
       }
-    }
 
-    return {
-      version: '1.0.0',
-      exportDate: new Date().toISOString(),
-      categories,
-      images: images.map(({ pixelationLevels, ...image }) => image as any),
-      blobs
+      const exportData: ExportData = {
+        version: '1.0.0',
+        exportDate: new Date().toISOString(),
+        categories,
+        images: images.map(({ pixelationLevels, ...image }) => image as any),
+        blobs
+      }
+      
+      console.log(`Export complete: ${Object.keys(blobs).length} blobs processed`)
+      return exportData
+    } catch (error) {
+      console.error('Export failed:', error)
+      throw new Error(`Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 
   async importData(data: ExportData): Promise<void> {
-    // Clear existing data
-    await this.clearAllData()
+    try {
+      // Validate data structure
+      if (!data.version || !Array.isArray(data.categories) || !Array.isArray(data.images)) {
+        throw new Error('Invalid backup file structure')
+      }
+      
+      console.log(`Importing ${data.categories.length} categories and ${data.images.length} images`)
+      
+      // Clear existing data
+      await this.clearAllData()
 
-    // Import categories
-    for (const category of data.categories) {
-      await this.saveCategory(category)
-    }
-
-    // Import images with blobs
-    for (const imageData of data.images) {
-      const pixelationLevels = {
-        level1: this.base64ToBlob(data.blobs[`${imageData.id}_level1`] || ''),
-        level2: this.base64ToBlob(data.blobs[`${imageData.id}_level2`] || ''),
-        level3: this.base64ToBlob(data.blobs[`${imageData.id}_level3`] || ''),
-        level4: this.base64ToBlob(data.blobs[`${imageData.id}_level4`] || '')
+      // Import categories
+      for (const category of data.categories) {
+        try {
+          await this.saveCategory(category)
+        } catch (error) {
+          console.warn(`Failed to import category ${category.name}:`, error)
+          // Continue with other categories
+        }
       }
 
-      const image: GameImage = {
-        ...imageData,
-        pixelationLevels
-      } as GameImage
+      // Import images with blobs
+      for (const imageData of data.images) {
+        try {
+          const pixelationLevels = {
+            level1: data.blobs[`${imageData.id}_level1`] ? this.base64ToBlob(data.blobs[`${imageData.id}_level1`]) : null,
+            level2: data.blobs[`${imageData.id}_level2`] ? this.base64ToBlob(data.blobs[`${imageData.id}_level2`]) : null,
+            level3: data.blobs[`${imageData.id}_level3`] ? this.base64ToBlob(data.blobs[`${imageData.id}_level3`]) : null,
+            level4: data.blobs[`${imageData.id}_level4`] ? this.base64ToBlob(data.blobs[`${imageData.id}_level4`]) : null
+          }
 
-      await this.saveImage(image)
+          const image: GameImage = {
+            ...imageData,
+            pixelationLevels,
+            metadata: {
+              ...imageData.metadata,
+              uploadedAt: new Date(imageData.metadata.uploadedAt),
+              processedAt: new Date(imageData.metadata.processedAt)
+            }
+          } as GameImage
+
+          await this.saveImage(image)
+        } catch (error) {
+          console.warn(`Failed to import image ${imageData.originalName}:`, error)
+          // Continue with other images
+        }
+      }
+      
+      console.log('Import completed successfully')
+    } catch (error) {
+      console.error('Import failed:', error)
+      throw new Error(`Import failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
     }
   }
 

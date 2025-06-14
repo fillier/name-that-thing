@@ -16,18 +16,22 @@
           <div class="settings-grid">
             <div class="setting-card">
               <h3>Export Data</h3>
-              <p>Download all your categories and images as a file</p>
+              <p>Download all your categories and images as a backup file</p>
               <button @click="exportData" class="btn btn-primary" :disabled="loading">
-                📁 Export Data
+                <span v-if="loading">⏳ Exporting...</span>
+                <span v-else>📁 Export Data</span>
               </button>
+              <small>Creates a JSON file with all your data for backup or sharing</small>
             </div>
             
             <div class="setting-card">
               <h3>Import Data</h3>
-              <p>Import categories and images from a previously exported file</p>
+              <p>Import categories and images from a previously exported backup file</p>
               <button @click="startImport" class="btn btn-secondary" :disabled="loading">
-                📂 Import Data
+                <span v-if="loading">⏳ Importing...</span>
+                <span v-else>📂 Import Data</span>
               </button>
+              <small>⚠️ This will replace all existing data with the imported data</small>
             </div>
             
             <div class="setting-card">
@@ -190,11 +194,13 @@
 import { ref, onMounted } from 'vue'
 import { useCategoriesStore } from '@/stores/categories'
 import { useSettingsStore } from '@/stores/settings'
+import { useToast } from '@/composables/useToast'
 import { db } from '@/services/database'
 import { downloadFile, readFileAsText } from '@/utils'
 
 const categoriesStore = useCategoriesStore()
 const settingsStore = useSettingsStore()
+const toast = useToast()
 
 // State
 const loading = ref(false)
@@ -217,10 +223,11 @@ const exportData = async () => {
     
     downloadFile(dataStr, fileName, 'application/json')
     
+    toast.success(`Data exported successfully as ${fileName}`, { duration: 4000 })
     console.log('Data exported successfully')
   } catch (error) {
     console.error('Failed to export data:', error)
-    // TODO: Show error toast
+    toast.error('Failed to export data. Please try again.', { duration: 5000 })
   } finally {
     loading.value = false
   }
@@ -247,6 +254,19 @@ const handleImport = async (event: Event) => {
       throw new Error('Invalid backup file format')
     }
     
+    // Show confirmation for data import (as it clears existing data)
+    const shouldImport = confirm(
+      `This will replace all existing data with the imported data from ${file.name}. ` +
+      `Found ${importData.categories?.length || 0} categories and ${importData.images?.length || 0} images. ` +
+      `Continue?`
+    )
+    
+    if (!shouldImport) {
+      // Reset file input and return
+      target.value = ''
+      return
+    }
+    
     // Import data to IndexedDB
     await db.importData(importData)
     
@@ -256,10 +276,20 @@ const handleImport = async (event: Event) => {
     // Reset file input
     target.value = ''
     
+    toast.success(
+      `Data imported successfully! ${importData.categories?.length || 0} categories and ${importData.images?.length || 0} images restored.`, 
+      { duration: 5000 }
+    )
     console.log('Data imported successfully')
   } catch (error) {
     console.error('Failed to import data:', error)
-    // TODO: Show error toast
+    if (error instanceof SyntaxError) {
+      toast.error('Invalid file format. Please select a valid Name That Thing backup file.', { duration: 5000 })
+    } else {
+      toast.error('Failed to import data. Please check the file and try again.', { duration: 5000 })
+    }
+    // Reset file input on error
+    target.value = ''
   } finally {
     loading.value = false
   }
@@ -276,10 +306,11 @@ const clearAllData = async () => {
     await categoriesStore.loadCategories()
     
     showClearConfirm.value = false
+    toast.success('All data cleared successfully', { duration: 4000 })
     console.log('All data cleared')
   } catch (error) {
     console.error('Failed to clear data:', error)
-    // TODO: Show error toast
+    toast.error('Failed to clear data. Please try again.', { duration: 5000 })
   } finally {
     loading.value = false
   }
@@ -379,6 +410,28 @@ onMounted(async () => {
     margin: 0 0 1rem 0;
     color: var(--text-secondary);
     font-size: 0.9rem;
+  }
+  
+  small {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.4;
+    
+    &:has(+ small) {
+      margin-bottom: 0.25rem;
+    }
+  }
+  
+  button {
+    min-width: 140px;
+    
+    span {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
   }
 }
 
