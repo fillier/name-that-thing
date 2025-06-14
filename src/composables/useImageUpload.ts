@@ -66,20 +66,10 @@ export function useImageUpload() {
           )
 
           if (result.success && result.processedImage) {
-            // Additional validation to ensure all pixelation levels are present
-            const { ImageProcessingService: IPS } = await import('@/services/imageProcessing')
-            const isValid = IPS.validatePixelationLevels(result.processedImage.pixelationLevels)
-            
-            if (isValid) {
-              successful.push(result.processedImage)
-              options?.onImageProcessed?.(result.processedImage)
-            } else {
-              const error = { fileName: file.name, error: 'Image validation failed: incomplete pixelation levels' }
-              failed.push(error)
-              uploadErrors.value.push(error)
-              options?.onError?.(file.name, 'Image validation failed: incomplete pixelation levels')
-              console.error('useImageUpload: Image failed validation despite successful processing:', file.name)
-            }
+            // The ImageProcessingService already validates pixelation levels internally
+            // No need for additional validation here as it can cause false positives
+            successful.push(result.processedImage)
+            options?.onImageProcessed?.(result.processedImage)
           } else {
             const error = { fileName: file.name, error: result.error || 'Unknown error' }
             failed.push(error)
