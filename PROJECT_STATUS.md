@@ -13,7 +13,7 @@
 ### Image Processing Pipeline
 - ✅ Canvas-based image processing service
 - ✅ Automatic image resizing (max 1280px width)
-- ✅ 4-level pixelation system (8x8 → 16x16 → 32x32 → original)
+- ✅ 4-level pixelation system (64x64 → 32x32 → 16x16 → original)
 - ✅ Blob storage for efficient memory management
 - ✅ Batch processing for multiple image uploads
 - ✅ File validation (format, size, type checking)
