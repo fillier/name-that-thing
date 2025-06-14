@@ -528,6 +528,11 @@ onMounted(async () => {
     margin: 0;
     color: var(--text-primary);
   }
+  
+  .header-actions {
+    display: flex;
+    gap: 0.75rem; // Add gap between buttons
+  }
 }
 
 .categories-grid {
