@@ -1,4 +1,4 @@
-import { ref, reactive, readonly } from 'vue'
+import { reactive, readonly } from 'vue'
 
 export interface Toast {
   id: string

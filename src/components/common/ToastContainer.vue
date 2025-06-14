@@ -26,7 +26,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { useToast } from '@/composables/useToast'
 
 const { toasts, removeToast } = useToast()

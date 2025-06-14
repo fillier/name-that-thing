@@ -225,6 +225,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useCategoriesStore } from '@/stores/categories'
 import { useGameStore } from '@/stores/game'
+import { useSettingsStore } from '@/stores/settings'
 import { useImageUpload } from '@/composables/useImageUpload'
 import { useToast } from '@/composables/useToast'
 import UploadProgress from '@/components/setup/UploadProgress.vue'
@@ -234,12 +235,12 @@ import type { Category } from '@/types'
 const router = useRouter()
 const categoriesStore = useCategoriesStore()
 const gameStore = useGameStore()
+const settingsStore = useSettingsStore()
 const toast = useToast()
 const { 
   isUploading, 
   uploadProgress, 
   uploadErrors, 
-  hasErrors,
   uploadImages,
   validateFiles,
   clearErrors 
@@ -249,10 +250,11 @@ const {
 const selectedCategory = ref<Category | null>(null)
 const showCreateCategory = ref(false)
 const showEditCategory = ref(false)
-const showDeleteConfirmation = ref(false)
 const showUploadProgress = ref(false)
-const fileInput = ref<HTMLInputElement>()
 const successfulUploads = ref(0)
+const fileInput = ref<HTMLInputElement>()
+
+const showDeleteConfirmation = ref(false)
 const newCategory = ref({
   name: '',
   description: ''
@@ -372,8 +374,8 @@ const handleFileUpload = async (event: Event) => {
   
   if (invalid.length > 0) {
     // Show validation errors
-    invalid.forEach(({ file, error }) => {
-      toast.warning(`${file.name}: ${error}`)
+    invalid.forEach(({ file, reason }) => {
+      toast.warning(`${file.name}: ${reason}`)
     })
   }
 
@@ -390,8 +392,9 @@ const handleFileUpload = async (event: Event) => {
 
     // Upload and process images
     const result = await uploadImages(valid, selectedCategory.value.id, {
-      maxWidth: 1280,
-      quality: 0.9,
+      maxWidth: settingsStore.settings.maxImageSize,
+      minWidth: settingsStore.settings.minImageSize,
+      quality: settingsStore.settings.compressionQuality,
       onImageProcessed: async (image) => {
         // Add processed image to store
         console.log('Processing image:', image.originalName, 'for category:', selectedCategory.value!.id)
@@ -458,12 +461,17 @@ const startGame = async () => {
 // Lifecycle
 onMounted(async () => {
   try {
+    // Load settings first
+    await settingsStore.loadSettings()
+    
+    // Then load categories
     await categoriesStore.loadCategories()
     console.log('Categories loaded:', categoriesStore.categories.length)
     console.log('Images loaded:', categoriesStore.images.length)
+    console.log('Settings loaded:', settingsStore.settings)
   } catch (error) {
-    console.error('Failed to load categories:', error)
-    toast.error('Failed to load categories')
+    console.error('Failed to load data:', error)
+    toast.error('Failed to load data')
   }
 })
 </script>

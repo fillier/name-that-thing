@@ -24,6 +24,7 @@ export function useImageUpload() {
     categoryId: string,
     options?: {
       maxWidth?: number
+      minWidth?: number
       quality?: number
       onImageProcessed?: (image: GameImage) => void
       onError?: (fileName: string, error: string) => void
@@ -62,7 +63,8 @@ export function useImageUpload() {
             file,
             categoryId,
             options?.maxWidth,
-            options?.quality
+            options?.quality,
+            options?.minWidth
           )
 
           if (result.success && result.processedImage) {

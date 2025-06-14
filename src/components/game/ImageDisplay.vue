@@ -51,7 +51,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, onUnmounted } from 'vue'
 import type { GameImage, PixelationLevel } from '@/types'
-import { ImageProcessingService } from '@/services/imageProcessing'
 
 interface Props {
   image?: GameImage | null

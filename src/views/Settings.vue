@@ -53,7 +53,20 @@
                 max="2560"
                 step="80"
               >
-              <small>Images will be resized to this maximum width while maintaining aspect ratio</small>
+              <small>Images larger than this width will be scaled down while maintaining aspect ratio</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="minImageSize">Minimum Image Width (pixels)</label>
+              <input 
+                id="minImageSize"
+                v-model.number="settings.minImageSize"
+                type="number"
+                min="400"
+                max="1600"
+                step="40"
+              >
+              <small>Images smaller than this width will be scaled up while maintaining aspect ratio</small>
             </div>
             
             <div class="form-group">
@@ -72,6 +85,15 @@
                 <span>Higher quality</span>
               </div>
               <small>Lower values create smaller files but reduce image quality</small>
+            </div>
+            
+            <div class="form-actions">
+              <button @click="resetToDefaults" class="btn btn-secondary">
+                Reset to Defaults
+              </button>
+              <button @click="saveSettingsManually" class="btn btn-primary">
+                Save Settings
+              </button>
             </div>
           </div>
         </div>
@@ -149,28 +171,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted } from 'vue'
 import { useCategoriesStore } from '@/stores/categories'
-import { useGameStore } from '@/stores/game'
+import { useSettingsStore } from '@/stores/settings'
 import { db } from '@/services/database'
 import { downloadFile, readFileAsText } from '@/utils'
 
-const router = useRouter()
 const categoriesStore = useCategoriesStore()
-const gameStore = useGameStore()
+const settingsStore = useSettingsStore()
 
 // State
 const loading = ref(false)
 const showClearConfirm = ref(false)
 const fileInput = ref<HTMLInputElement>()
 
-const settings = reactive({
-  maxImageSize: 1280,
-  compressionQuality: 0.9,
-  showProgress: true,
-  autoAdvance: false
-})
+// Use settings from store
+const settings = settingsStore.settings
 
 // Methods
 const exportData = async () => {
@@ -253,17 +269,27 @@ const clearAllData = async () => {
   }
 }
 
-const saveSettings = () => {
-  // TODO: Persist settings to localStorage or IndexedDB
-  gameStore.updateGameSettings({
-    showProgress: settings.showProgress,
-    autoAdvance: settings.autoAdvance
-  })
+const resetToDefaults = async () => {
+  try {
+    await settingsStore.resetSettings()
+    console.log('Settings reset to defaults')
+  } catch (error) {
+    console.error('Failed to reset settings:', error)
+  }
+}
+
+const saveSettingsManually = async () => {
+  try {
+    await settingsStore.saveSettings()
+    console.log('Settings saved manually')
+  } catch (error) {
+    console.error('Failed to save settings:', error)
+  }
 }
 
 // Lifecycle
-onMounted(() => {
-  // TODO: Load settings from storage
+onMounted(async () => {
+  await settingsStore.loadSettings()
 })
 
 // Watch for settings changes and auto-save
@@ -431,6 +457,14 @@ onMounted(() => {
   margin-top: 0.5rem;
   font-size: 0.8rem;
   color: var(--text-secondary);
+}
+
+.form-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 .about-card {

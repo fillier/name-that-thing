@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings Test</title>
+</head>
+<body>
+    <h1>Settings Persistence Test</h1>
+    <div id="output"></div>
+    
+    <script>
+        // Test localStorage functionality
+        const STORAGE_KEY = 'name-that-thing-settings';
+        
+        // Test saving settings
+        const testSettings = {
+            maxImageSize: 1600,
+            minImageSize: 600,
+            compressionQuality: 0.8,
+            showProgress: false,
+            autoAdvance: true
+        };
+        
+        console.log('Testing settings persistence...');
+        
+        // Save to localStorage
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(testSettings));
+        console.log('Saved settings:', testSettings);
+        
+        // Load from localStorage
+        const loaded = localStorage.getItem(STORAGE_KEY);
+        const parsedSettings = JSON.parse(loaded);
+        console.log('Loaded settings:', parsedSettings);
+        
+        // Verify they match
+        const matches = JSON.stringify(testSettings) === JSON.stringify(parsedSettings);
+        console.log('Settings match:', matches);
+        
+        document.getElementById('output').innerHTML = `
+            <h2>Test Results:</h2>
+            <p>Settings saved: ${JSON.stringify(testSettings, null, 2)}</p>
+            <p>Settings loaded: ${JSON.stringify(parsedSettings, null, 2)}</p>
+            <p>Match: ${matches ? '✅ PASS' : '❌ FAIL'}</p>
+            <p>Open browser console to see details</p>
+        `;
+        
+        // Test the actual Vue app by opening it
+        setTimeout(() => {
+            console.log('Opening the actual Vue app...');
+            window.open('http://localhost:5173/', '_blank');
+        }, 2000);
+    </script>
+</body>
+</html>

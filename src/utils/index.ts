@@ -72,12 +72,14 @@ export const loadImageFromFile = (file: File): Promise<HTMLImageElement> => {
 }
 
 /**
- * Resize image to maximum width while maintaining aspect ratio
+ * Resize image to target width while maintaining aspect ratio
+ * Scales down images larger than maxWidth and scales up images smaller than minWidth
  */
 export const resizeImage = (
   img: HTMLImageElement,
   maxWidth: number = 1280,
-  quality: number = 0.9
+  quality: number = 0.9,
+  minWidth: number = 800
 ): Promise<{
   canvas: HTMLCanvasElement
   blob: Blob
@@ -94,13 +96,24 @@ export const resizeImage = (
     
     // Calculate new dimensions
     let { width, height } = img
+    
+    // Scale down if image is too large
     if (width > maxWidth) {
       height = (height * maxWidth) / width
       width = maxWidth
     }
+    // Scale up if image is too small
+    else if (width < minWidth) {
+      height = (height * minWidth) / width
+      width = minWidth
+    }
     
     canvas.width = width
     canvas.height = height
+    
+    // Use high-quality scaling for better results
+    ctx.imageSmoothingEnabled = true
+    ctx.imageSmoothingQuality = 'high'
     
     // Draw resized image
     ctx.drawImage(img, 0, 0, width, height)

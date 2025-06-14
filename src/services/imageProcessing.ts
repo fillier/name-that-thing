@@ -13,6 +13,7 @@ import {
 export class ImageProcessingService {
   private static readonly PIXELATION_LEVELS = [64, 32, 16, 0] // 0 means original, higher numbers are more pixelated
   private static readonly DEFAULT_MAX_WIDTH = 1280
+  private static readonly DEFAULT_MIN_WIDTH = 800
   private static readonly DEFAULT_QUALITY = 0.9
 
   /**
@@ -22,7 +23,8 @@ export class ImageProcessingService {
     file: File,
     categoryId: string,
     maxWidth: number = ImageProcessingService.DEFAULT_MAX_WIDTH,
-    quality: number = ImageProcessingService.DEFAULT_QUALITY
+    quality: number = ImageProcessingService.DEFAULT_QUALITY,
+    minWidth: number = ImageProcessingService.DEFAULT_MIN_WIDTH
   ): Promise<ImageProcessingResult> {
     try {
       // Validate file
@@ -44,7 +46,7 @@ export class ImageProcessingService {
       const img = await loadImageFromFile(file)
       
       // Resize image
-      const { canvas, blob: resizedBlob, dimensions } = await resizeImage(img, maxWidth, quality)
+      const { canvas, blob: resizedBlob, dimensions } = await resizeImage(img, maxWidth, quality, minWidth)
       
       // Create pixelation levels
       const pixelationLevels = await ImageProcessingService.createPixelationLevels(
@@ -101,6 +103,7 @@ export class ImageProcessingService {
     categoryId: string,
     maxWidth?: number,
     quality?: number,
+    minWidth?: number,
     onProgress?: (current: number, total: number) => void
   ): Promise<{
     successful: GameImage[]
@@ -118,7 +121,8 @@ export class ImageProcessingService {
           file,
           categoryId,
           maxWidth,
-          quality
+          quality,
+          minWidth
         )
 
         if (result.success && result.processedImage) {
@@ -151,6 +155,7 @@ export class ImageProcessingService {
     categoryId: string,
     options: {
       maxWidth?: number
+      minWidth?: number
       quality?: number
       batchSize?: number
       onProgress?: (processed: number, total: number) => void
@@ -159,6 +164,7 @@ export class ImageProcessingService {
   ): Promise<ImageProcessingResult[]> {
     const {
       maxWidth = ImageProcessingService.DEFAULT_MAX_WIDTH,
+      minWidth = ImageProcessingService.DEFAULT_MIN_WIDTH,
       quality = ImageProcessingService.DEFAULT_QUALITY,
       onProgress,
       onImageComplete
@@ -179,7 +185,8 @@ export class ImageProcessingService {
           file,
           categoryId,
           maxWidth,
-          quality
+          quality,
+          minWidth
         )
         
         results.push(result)
