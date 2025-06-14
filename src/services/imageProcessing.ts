@@ -11,7 +11,7 @@ import {
 } from '@/utils'
 
 export class ImageProcessingService {
-  private static readonly PIXELATION_LEVELS = [32, 16, 8, 0] // 0 means original, higher numbers are more pixelated
+  private static readonly PIXELATION_LEVELS = [64, 32, 16, 0] // 0 means original, higher numbers are more pixelated
   private static readonly DEFAULT_MAX_WIDTH = 1280
   private static readonly DEFAULT_QUALITY = 0.9
 

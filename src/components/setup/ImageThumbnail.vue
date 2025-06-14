@@ -40,8 +40,8 @@ const thumbnailUrl = ref<string>('')
 const loading = ref(true)
 
 const createThumbnail = () => {
-  // Use level 3 (lightly pixelated) as thumbnail for preview
-  const blob = props.image.pixelationLevels?.level3
+  // Use level 1 (most pixelated) as thumbnail for preview
+  const blob = props.image.pixelationLevels?.level1
   console.log('ImageThumbnail: Creating thumbnail for', props.image.originalName)
   console.log('ImageThumbnail: Blob exists:', !!blob, 'Size:', blob?.size || 0)
   
