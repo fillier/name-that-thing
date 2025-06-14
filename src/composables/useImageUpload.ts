@@ -66,8 +66,20 @@ export function useImageUpload() {
           )
 
           if (result.success && result.processedImage) {
-            successful.push(result.processedImage)
-            options?.onImageProcessed?.(result.processedImage)
+            // Additional validation to ensure all pixelation levels are present
+            const { ImageProcessingService: IPS } = await import('@/services/imageProcessing')
+            const isValid = IPS.validatePixelationLevels(result.processedImage.pixelationLevels)
+            
+            if (isValid) {
+              successful.push(result.processedImage)
+              options?.onImageProcessed?.(result.processedImage)
+            } else {
+              const error = { fileName: file.name, error: 'Image validation failed: incomplete pixelation levels' }
+              failed.push(error)
+              uploadErrors.value.push(error)
+              options?.onError?.(file.name, 'Image validation failed: incomplete pixelation levels')
+              console.error('useImageUpload: Image failed validation despite successful processing:', file.name)
+            }
           } else {
             const error = { fileName: file.name, error: result.error || 'Unknown error' }
             failed.push(error)
@@ -82,9 +94,9 @@ export function useImageUpload() {
           options?.onError?.(file.name, errorMessage)
         }
 
-        // Small delay to prevent resource contention and allow memory cleanup
+        // Enhanced delay to prevent resource contention and allow memory cleanup
         if (i < fileArray.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 200)) // Increased from 10ms
+          await new Promise(resolve => setTimeout(resolve, 300)) // Increased to 300ms for better reliability
         }
       }
 

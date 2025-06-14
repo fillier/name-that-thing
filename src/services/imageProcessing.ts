@@ -216,20 +216,51 @@ export class ImageProcessingService {
     quality: number,
     retryCount: number = 0
   ): Promise<GameImage['pixelationLevels']> {
-    const maxRetries = 3 // Increased from 2 to 3 retries
+    const maxRetries = 5 // Increased from 3 to 5 retries for better reliability
     
     try {
-      return await this.createPixelationLevelsInternal(canvas, quality)
+      const result = await this.createPixelationLevelsInternal(canvas, quality)
+      
+      // Double-check validation after successful creation
+      const isValid = this.validatePixelationLevels(result)
+      if (!isValid) {
+        throw new Error('Created pixelation levels failed final validation check')
+      }
+      
+      return result
     } catch (error) {
       if (retryCount < maxRetries) {
         console.warn(`ImageProcessingService: Retry ${retryCount + 1}/${maxRetries} for pixelation levels creation:`, error)
-        // Clean up memory and wait before retrying
+        
+        // More aggressive cleanup before retry
         await this.forceMemoryCleanup()
-        await new Promise(resolve => setTimeout(resolve, 1500 + (retryCount * 500))) // Increasing delay
-        return this.createPixelationLevels(canvas, quality, retryCount + 1)
+        
+        // Progressive delay that gets longer with each retry
+        const delay = 1000 + (retryCount * 1000) // 1s, 2s, 3s, 4s, 5s
+        console.log(`ImageProcessingService: Waiting ${delay}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, delay))
+        
+        // Try with slightly lower quality on later retries to reduce memory pressure
+        const retryQuality = retryCount >= 2 ? Math.max(0.7, quality - 0.1) : quality
+        if (retryQuality !== quality) {
+          console.log(`ImageProcessingService: Reducing quality to ${retryQuality} for retry ${retryCount + 1}`)
+        }
+        
+        return this.createPixelationLevels(canvas, retryQuality, retryCount + 1)
       } else {
         console.error(`ImageProcessingService: Failed to create pixelation levels after ${maxRetries} retries:`, error)
-        throw error
+        
+        // One final attempt with minimal quality as a last resort
+        if (quality > 0.6) {
+          console.log('ImageProcessingService: Attempting final retry with minimal quality (0.6)')
+          try {
+            return await this.createPixelationLevelsInternal(canvas, 0.6)
+          } catch (finalError) {
+            console.error('ImageProcessingService: Final low-quality attempt also failed:', finalError)
+          }
+        }
+        
+        throw new Error(`Failed to create pixelation levels after ${maxRetries} retries and fallback attempt: ${error instanceof Error ? error.message : 'Unknown error'}`)
       }
     }
   }
@@ -243,19 +274,24 @@ export class ImageProcessingService {
   ): Promise<GameImage['pixelationLevels']> {
     const levels: GameImage['pixelationLevels'] = {} as GameImage['pixelationLevels']
     
-    // Create a copy of the canvas for each level
+    console.log('ImageProcessingService: Starting pixelation level creation with enhanced validation')
+    
+    // Create a copy of the canvas for each level with enhanced error handling and validation
     for (let i = 0; i < ImageProcessingService.PIXELATION_LEVELS.length; i++) {
       const pixelSize = ImageProcessingService.PIXELATION_LEVELS[i]
       const levelKey = `level${i + 1}` as keyof GameImage['pixelationLevels']
       
       console.log(`ImageProcessingService: Creating ${levelKey} with pixel size ${pixelSize}`)
       
+      let levelCanvas: HTMLCanvasElement | null = null
+      let ctx: CanvasRenderingContext2D | null = null
+      
       try {
         // Create canvas copy with better memory management
-        const levelCanvas = document.createElement('canvas')
+        levelCanvas = document.createElement('canvas')
         levelCanvas.width = canvas.width
         levelCanvas.height = canvas.height
-        const ctx = levelCanvas.getContext('2d')
+        ctx = levelCanvas.getContext('2d')
         
         if (!ctx) {
           throw new Error('Could not get canvas context')
@@ -264,15 +300,18 @@ export class ImageProcessingService {
         // Copy original image to level canvas
         ctx.drawImage(canvas, 0, 0)
         
+        // Add a small delay to prevent browser overload
+        await new Promise(resolve => setTimeout(resolve, 50))
+        
         if (pixelSize === 0) {
           // Level 4: Original image
           console.log(`ImageProcessingService: Creating original image blob for ${levelKey}`)
           levels[levelKey] = await new Promise<Blob>((resolve, reject) => {
             const timeoutId = setTimeout(() => {
               reject(new Error(`Timeout creating original blob for ${levelKey}`))
-            }, 10000) // 10 second timeout
+            }, 15000) // Increased timeout to 15 seconds
             
-            levelCanvas.toBlob(
+            levelCanvas!.toBlob(
               (blob) => {
                 clearTimeout(timeoutId)
                 if (blob && blob.size > 0) {
@@ -298,28 +337,43 @@ export class ImageProcessingService {
           }
         }
         
-        // Clean up the level canvas to free memory immediately
-        try {
-          ctx.clearRect(0, 0, levelCanvas.width, levelCanvas.height)
-          levelCanvas.width = 1 // Reset to minimal size
-          levelCanvas.height = 1
-          ctx.fillStyle = 'transparent'
-          ctx.clearRect(0, 0, 1, 1)
-        } catch (cleanupError) {
-          console.warn(`ImageProcessingService: Canvas cleanup warning for ${levelKey}:`, cleanupError)
+        // Validate the level was created successfully before continuing
+        if (!levels[levelKey] || levels[levelKey]!.size === 0) {
+          throw new Error(`Level ${levelKey} validation failed after creation`)
         }
         
       } catch (error) {
         console.error(`ImageProcessingService: Failed to create ${levelKey}:`, error)
         throw new Error(`Failed to create pixelation level ${levelKey}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      } finally {
+        // Clean up the level canvas to free memory immediately
+        if (ctx && levelCanvas) {
+          try {
+            ctx.clearRect(0, 0, levelCanvas.width, levelCanvas.height)
+            levelCanvas.width = 1 // Reset to minimal size
+            levelCanvas.height = 1
+          } catch (cleanupError) {
+            console.warn(`ImageProcessingService: Canvas cleanup warning for ${levelKey}:`, cleanupError)
+          }
+        }
+        
+        // Explicit cleanup
+        levelCanvas = null
+        ctx = null
       }
     }
     
-    // Validate all levels were created successfully
+    // Final comprehensive validation of all levels
     const invalidLevels = Object.entries(levels).filter(([_, blob]) => !blob || blob.size === 0)
     if (invalidLevels.length > 0) {
       const invalidKeys = invalidLevels.map(([key, _]) => key)
       console.error(`ImageProcessingService: Invalid levels detected:`, invalidKeys)
+      console.error(`ImageProcessingService: Level sizes:`, {
+        level1: levels.level1?.size || 0,
+        level2: levels.level2?.size || 0,
+        level3: levels.level3?.size || 0,
+        level4: levels.level4?.size || 0
+      })
       throw new Error(`Failed to create valid pixelation levels: ${invalidKeys.join(', ')}`)
     }
     
@@ -548,6 +602,8 @@ export class ImageProcessingService {
    * Force garbage collection and memory cleanup (best effort)
    */
   private static async forceMemoryCleanup() {
+    console.log('ImageProcessingService: Starting aggressive memory cleanup')
+    
     // Trigger garbage collection if available (mainly for development)
     if (typeof window !== 'undefined' && (window as any).gc) {
       console.log('ImageProcessingService: Triggering garbage collection')
@@ -558,17 +614,34 @@ export class ImageProcessingService {
     if (typeof window !== 'undefined' && window.requestIdleCallback) {
       await new Promise<void>(resolve => {
         window.requestIdleCallback(() => {
+          console.log('ImageProcessingService: Idle callback executed')
           resolve()
-        })
+        }, { timeout: 1000 })
       })
     }
     
-    // Force browser to perform any pending cleanup
-    await new Promise(resolve => setTimeout(resolve, 100))
+    // Force browser to perform any pending cleanup with longer delay
+    await new Promise(resolve => setTimeout(resolve, 200))
+    
+    // Try to revoke any dangling object URLs (best effort)
+    try {
+      // Force creation and immediate cleanup of a small canvas to trigger cleanup
+      const cleanupCanvas = document.createElement('canvas')
+      cleanupCanvas.width = 1
+      cleanupCanvas.height = 1
+      const cleanupCtx = cleanupCanvas.getContext('2d')
+      if (cleanupCtx) {
+        cleanupCtx.clearRect(0, 0, 1, 1)
+      }
+    } catch (error) {
+      console.warn('ImageProcessingService: Cleanup canvas creation failed:', error)
+    }
     
     // Additional cleanup attempt
     if (typeof window !== 'undefined' && (window as any).gc) {
       ;(window as any).gc()
     }
+    
+    console.log('ImageProcessingService: Memory cleanup completed')
   }
 }
