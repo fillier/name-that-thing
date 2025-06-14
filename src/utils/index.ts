@@ -99,12 +99,12 @@ export const resizeImage = (
     
     // Scale down if image is too large
     if (width > maxWidth) {
-      height = (height * maxWidth) / width
+      height = Math.round((height * maxWidth) / width)
       width = maxWidth
     }
     // Scale up if image is too small
     else if (width < minWidth) {
-      height = (height * minWidth) / width
+      height = Math.round((height * minWidth) / width)
       width = minWidth
     }
     
